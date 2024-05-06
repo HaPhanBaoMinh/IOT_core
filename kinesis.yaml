@@ -1,0 +1,81 @@
+Parameters:
+  RawBucketName:
+    Type: String
+    Description: The name of the S3 bucket to create
+    Default: iot-raw-data
+
+  ParquetBucketName:
+    Type: String
+    Description: The name of the S3 bucket to create
+    Default: iot-parquet-data
+
+Resources:
+  # S3 bucket raw data
+  S3BucketRawData:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref RawBucketName
+
+  S3BucketiotParquetData:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ParquetBucketName
+
+  # FirehosePutS3Role
+  FirehosePutS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FirehosePutS3Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !GetAtt S3BucketRawData.Arn
+                  - !Sub "${S3BucketRawData.Arn}/*"
+
+  # Kinesis Firehose Delivery Stream
+  KinesisFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: iot-delivery-stream
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !GetAtt S3BucketRawData.Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 1
+        CompressionFormat: UNCOMPRESSED
+        Prefix: "raw-data/"
+        RoleARN: !GetAtt FirehosePutS3Role.Arn
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: /aws/kinesisfirehose/iot-delivery-stream
+          LogStreamName: iot-delivery-stream
+        DynamicPartitioningConfiguration:
+          Enabled: true
+          RetryOptions:
+            DurationInSeconds: 300
+
+Outputs:
+  KinesisFirehoseArn:
+    Description: The ARN of the Kinesis Firehose Delivery Stream
+    Value: !GetAtt KinesisFirehose.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-kinesis-firehose-arn"
+
+  KinesisFirehoseName:
+    Description: The name of the Kinesis Firehose Delivery Stream
+    Value: !Ref KinesisFirehose
+    Export:
+      Name: !Sub "${AWS::StackName}-kinesis-firehose-name"
