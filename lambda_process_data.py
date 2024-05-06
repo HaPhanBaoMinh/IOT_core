@@ -1,6 +1,7 @@
 import boto3
 import json
 import pandas as pd
+import ast
 
 def correct_json_format(json_str):
     keys = ['temperature', 'humidity', 'timestamp']
@@ -35,26 +36,6 @@ def handle ():
         data = obj['Body'].read().decode('utf-8')
         raw_data.append(data)
 
-    # Process the raw data
-    for data in raw_data:
-        parsed_json = json.loads(data)
-        nested_json_str = "".join(parsed_json.values())
-        desired_json_str = json.dumps(nested_json_str)
-        json_data.append(desired_json_str)
-
-    for json_str in json_data:
-        # Remove surrounding quotes and braces, then parse the inner JSON string
-        inner_json_str = json_str.strip('"').split(':', 1)[1].strip()
-        print(json_str)
-        json_data = correct_json_format(inner_json_str)
-        # print(json_data)
-        
-
-
-    # df = pd.DataFrame(nested_json_objects)
-    # df.to_parquet('data.parquet', index=False)
-
-    # # Upload the file to S3 with the constructed key
-    # s3_client.upload_file('./data.parquet', formatted_bucket_name, s3_prefix)
+   
 
 handle()
