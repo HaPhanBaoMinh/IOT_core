@@ -1,0 +1,13 @@
+[
+    {
+        "device_ud": "D-01",
+        "device_name": "Device 1",
+        "temperature": "25.5",
+        "humidity": "60",
+        "status": "active",
+        "YYYY": "2021",
+        "MM": "01",
+        "DD": "01",
+        "HH": "01"
+    }
+]

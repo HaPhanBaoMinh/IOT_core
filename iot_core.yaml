@@ -1,0 +1,46 @@
+Parameters:
+  StreamName:
+    Type: String
+    Description: The name of the Kinesis stream to create
+    Default: iot-stream
+
+  FirehoseStackName:
+    Type: String
+    Description: The name of the stack
+    Default: iot-firehose
+
+Resources:
+  IoTFirehosePutRecordRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FirehosePutRecordPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:PutRecord
+                  - kinesis:PutRecords
+                Resource:
+                  Fn::ImportValue: !Sub "${FirehoseStackName}-kinesis-firehose-arn"
+
+  IoTToFirehoseRule:
+    Type: AWS::IoT::TopicRule
+    Properties:
+      RuleName: iot-to-firehose-rule
+      TopicRulePayload:
+        Actions:
+          - Firehose:
+              RoleArn: !GetAtt IoTFirehosePutRecordRole.Arn
+              DeliveryStreamName:
+                Fn::ImportValue: !Sub "${FirehoseStackName}-kinesis-firehose-name"
+        Sql: "SELECT * FROM 'iot-delivery-stream'"
+        RuleDisabled: false
